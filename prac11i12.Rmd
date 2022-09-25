@@ -1,0 +1,222 @@
+---
+title: "Pràctica 11 i 12"
+author: "Clara Albert"
+date: "8 de diciembre de 2019"
+output: html_document
+---
+# Pràctica 11
+```{r}
+## library(car);library(lmtest);library(lawstat)
+## library(nortest);library(doBy);library(foreign)
+dades=read.table("cases.txt",header=T)
+head (dades,3)
+```
+
+## Apartat 1
+```{r}
+n=nrow(dades)
+st=numeric(n)
+st[dades$STORM=="no"]=0
+st[dades$STORM!="no"]=1
+dades2=data.frame(PREU=dades$PREU, SUPERF=dades$SUPERF,st=st,FP=dades$FP,DORMIT=dades$DORMIT,HABIT=dades$HABIT); head(dades2)
+mod=lm(PREU ~ SUPERF+ st+ FP+ DORMIT + HABIT ,data=dades2,x=TRUE,y=TRUE)
+smod=summary(mod); smod
+```
+
+## Apartat 2
+```{r}
+band_conf.mult=function(mod, alpha=.05){
+  y=mod$y
+  output=cbind(y, predict(mod,interval="confidence",level=1-alpha),
+  predict(mod,interval="prediction",level=1-alpha)[,-1])
+  colnames(output)=c("y","haty","linf.mu","lsup.mu","linf.pr","lsup.pr")
+  output=output[order(output[,2]),]
+  round(output,digits=2)
+}
+
+bandes=band_conf.mult(mod=mod); head(bandes)
+
+matplot(bandes[,2], bandes[,-1], lty = c(1,1,1,2,2), col=c(1,2,2,4,4), type = "l", ylab = "prediccions, intervals i observacions", xlab="prediccions", main="bandes de conf. (vermell) i de predic. (blau)", cex.main=.8);points(bandes[,2], bandes[,1],pch=19)
+```
+
+La línea central negra és la que relaciona les prediccions amb les prediccions. 
+
+Les bandes són irregulars perquè per a cada valor de predicció tindrem una amplada de banda diferent. 
+
+## Apartat 3
+```{r}
+names(dades)
+xh=data.frame(SUPERF=c(800,900),st=c(0,1),FP=c(1,0), DORMIT=c(2,3),HABIT=c(5,5)); xh
+
+mod=lm(PREU ~ SUPERF+ st+ FP+ DORMIT + HABIT ,data=dades2,x=TRUE,y=TRUE)
+muh.CI=predict(mod,newdata=xh,interval=c("confidence"))
+prxh.CI=predict(mod,newdata=xh,interval=c("prediction"))
+xh.pred=data.frame(xh,muh.CI,prxh.CI); xh.pred
+```
+## Exercici 1
+```{r}
+mo4=lm(PREU ~ SUPERF+ st+ FP+ DORMIT ,data=dades2,x=TRUE,y=TRUE)
+smo4=summary(mo4); smo4
+mo4$y
+
+bandes4=band_conf.mult(mod=mo4); head(bandes4)
+matplot(bandes4[,2], bandes4[,-1], lty = c(1,1,1,2,2), col=c(1,2,2,4,4), type = "l", ylab = "prediccions, intervals i observacions", xlab="prediccions", main="bandes de conf. (vermell) i de predic. (blau)", cex.main=.8);points(bandes4[,2], bandes4[,1],pch=19)
+
+muh4.CI=predict(mo4,newdata=xh,interval=c("confidence"))
+prxh4.CI=predict(mo4,newdata=xh,interval=c("prediction"))
+xh.pred4=data.frame(xh,muh4.CI,prxh4.CI); xh.pred4
+```
+
+
+## Exercici 2
+```{r}
+head (mtcars,3)
+mtcars$mpg=100/mtcars$mpg
+head (mtcars,3)
+mod1=lm (mpg~disp+hp+wt+am, data=mtcars,x=TRUE,y=TRUE); mod1
+
+
+bandes1=band_conf.mult(mod=mod1); head(bandes1)
+matplot(bandes1[,2], bandes1[,-1], lty = c(1,1,1,2,2), col=c(1,2,2,4,4), type = "l", ylab = "prediccions, intervals i observacions", xlab="prediccions", main="bandes de conf. (vermell) i de predic. (blau)", cex.main=.8);points(bandes1[,2], bandes1[,1],pch=19)
+
+xh1=data.frame(disp=100,hp=20,wt=2.5,am=1); xh1
+
+muh1.CI=predict(mod1,newdata=xh1,interval=c("confidence"))
+prxh1.CI=predict(mod1,newdata=xh1,interval=c("prediction"))
+xh.pred1=data.frame(xh1,muh1.CI,prxh1.CI); xh.pred1
+```
+
+# Pràctica 12
+```{r}
+## library(car);library(lmtest);library(lawstat);library(nortest);library(doBy);library(foreign)
+dades=read.table("cases.txt",header=T)
+n=nrow(dades); st=numeric(n)
+st[dades$STORM=="no"]=0; st[dades$STORM!="no"]=1
+dades2=data.frame(dades[c(1,3)],st,dades[c(4,2,5)])
+mod=lm(PREU ~ SUPERF+ st+ FP+ DORMIT + HABIT ,data=dades2,x=TRUE,y=TRUE)
+k=mod$rank-1; 
+p=mod$rank 
+X=mod$x
+```
+
+## Exercici 1
+```{r}
+ei=residuals (mod);head (ei)
+ri=rstandard(mod);head (ri)
+dri=rstudent(mod);head (dri)
+```
+
+## Exercici 2
+```{r}
+#Linealitat del model
+par(mfrow=c(1,1))
+plot(mod,which=1,pch=20) 
+```
+
+En la gràfica es destaca els punts influents que són els valors 18,20 i 22. A més a més, s'observa una manca de linealitat a la cua esquerra, tot i que a la cua dreta també hi ha una mica. 
+
+```{r}
+#Test de manca de linealitat
+paste(dades2[1,-1],collapse="")
+unir=function(v){paste(v,collapse="")}
+fact=apply(dades2[-1],1,FUN="unir")
+head (fact,3)
+head (dades2,3)
+dades2$fact=fact
+taula=table(fact)
+any(taula>1)
+lm.lof=lm(PREU~0+as.factor(fact),data=dades2)
+summary(lm.lof)
+anova(mod,lm.lof)
+```
+
+No podem fer el test de manca de linealitat, ja que no hi ha cap rèplica. Es comprova amb el any(taula>1), que ens retorna FALSE (no hi ha cap valor repetit)
+
+```{r}
+#Igualtat de variàncies del model
+plot (mod,which=3)
+require (lmtest)
+bptest(mod)
+```
+
+A partir del test i de la gràfica podem dir que el resultat no és significatiu (p-valor>0.05 i no hi ha tendències a la gràfica). 
+
+```{r}
+#Normalitat del test
+par (mfrow=c(1,3))
+plot (mod, which=2)
+boxplot (mod$residuals)
+require (car); qqPlot (mod,distribution = "t")
+par (mfrow=c(1,1))
+
+require (nortest)
+lillie.test(mod$residuals)
+shapiro.test(mod$residuals)
+```
+
+Com a la primera gràfica tenim com a punts influents els valors 18, 20 i 22 de les dades i una certa desviació a la cua esquerra tot i que no creiem que sigui significativa. A partit dels dos tests veiem que cap dels dos és significatiu (els p-valor>0.05) per tant acceptem la normalitat de les dades. 
+
+## Exercici 3
+```{r}
+#Outliers
+outlierTest(mod)
+
+sum (abs(dri)>3)
+list(outliers=subset(dades2,abs(dri)>3))
+
+plot (1:n,dri,type="h",main="outliers",ylim=c(-4,4));abline(h=3,col="blue",lwd=2);abline(h=-3,col="blue",lwd=2)
+
+# Efecte palanca
+hati=hatvalues(mod)
+
+sum (hati>3*p/n)
+list(hat=subset(dades2,hati>3*p/n))
+
+plot (1:n,hati,type="h",main="punts palanca"); abline (h=3*p/n,col="blue",lwd=2)
+
+#DFBETAS
+dfbetas=dfbetas(mod)
+
+inf0=abs(dfbetas[,1])>(2/sqrt(n))
+influ.coefs=list (subset(dades2,inf0))
+for(j in (1:k)){
+  inf=abs(dfbetas[,j+1])>(2/sqrt(n))
+  influ.coefs[[j+1]]<-subset(dades2,inf)
+}
+names(influ.coefs)<-paste("infl.beta",0:k,sep="")
+influ.coefs
+
+par (mfrow=c(2,3))
+plot (1:n,dfbetas[,1],type="h",main="punts influents en beta0"); abline (h=2/sqrt(n),col="blue",lwd=2);abline (h=-2/sqrt(n),col="blue",lwd=2)
+plot (1:n,dfbetas[,2],type="h",main="punts influents en beta1"); abline (h=2/sqrt(n),col="blue",lwd=2);abline (h=-2/sqrt(n),col="blue",lwd=2)
+plot (1:n,dfbetas[,3],type="h",main="punts influents en beta2"); abline (h=2/sqrt(n),col="blue",lwd=2);abline (h=-2/sqrt(n),col="blue",lwd=2)
+plot (1:n,dfbetas[,4],type="h",main="punts influents en beta3"); abline (h=2/sqrt(n),col="blue",lwd=2);abline (h=-2/sqrt(n),col="blue",lwd=2)
+plot (1:n,dfbetas[,5],type="h",main="punts influents en beta4"); abline (h=2/sqrt(n),col="blue",lwd=2);abline (h=-2/sqrt(n),col="blue",lwd=2)
+plot (1:n,dfbetas[,6],type="h",main="punts influents en beta5"); abline (h=2/sqrt(n),col="blue",lwd=2);abline (h=-2/sqrt(n),col="blue",lwd=2)
+par (mfrow=c(1,1))
+
+#DFFITS
+dffit=dffits(mod)
+
+sum (abs(dffit)>2*sqrt(p/n))
+list(influ.dffit=subset(dades2,abs(dffit)>2*sqrt(p/n)))
+
+plot (1:n,dffit,type="h",main="influents en les prediccions"); abline(h=2*sqrt(p/n),col="blue",lwd=2); abline(h=-2*sqrt(p/n),col="blue",lwd=2)
+
+#Distància de Cook
+cook=cooks.distance(mod)
+
+sum (cook>qf(0.5,p,n-p))
+list(influ.cook=subset(dades2,cook>qf(0.5,p,n-p)))
+
+plot (1:n,cook,type="h",main="distància de Cook,llindar F",ylim=c(0,1)); abline(h=qf(0.5,p,n-p),col="blue",lwd=2)
+
+#CovRatio
+covRatio=covratio(mod)
+
+sum (covRatio>1+(3*p)/n|covRatio<1-(3*p)/n)
+list(influ.dffit=subset(dades2,covRatio>1+(3*p)/n|covRatio<1-(3*p)/n))
+
+plot (1:n,covRatio,type="h",main="influents en la precisió"); abline(h=1+(3*p)/n,col="blue",lwd=2);abline(h=1-(3*p)/n,col="blue",lwd=2)
+```
+

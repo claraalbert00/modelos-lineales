@@ -1,0 +1,101 @@
+---
+title: "Practica 3"
+author: "Clara Albert"
+date: "12 de octubre de 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Exercici 1
+```{r}
+p0=0.01
+r1=0.1
+r2=0.3
+r3=0.5
+r4=0.7
+r5=0.9
+
+t=seq(0,25,by=1)
+
+p=function(t,r) {
+  alfa=-log((1/p0)-1)
+  1/(1+exp(-alfa-(r*t)))
+}
+
+p1=p(t,r1)
+p2=p(t,r2)
+p3=p(t,r3)
+p4=p(t,r4)
+p5=p(t,r5)
+
+
+plot(t,p1,type="l",ylim=c(0,1));lines(p2,col="red",type="l",lty=2);lines (p3,type="l",col="green",lty=3);lines (p4,type="l",col="blue",lty=4); lines (p5,type="l",col="cyan",lty=5);legend(x=c(0,5),y=c(0.6,1),legend=c("r=0.1","r=0.3","r=0.5","r=0.7","r=0.9"),lty=c(1,2,3,4,5),col=c("black","red","green","blue","cyan"))
+
+
+```
+
+
+# Exercici 2
+```{r}
+
+x=seq(-5,5,by=0.01)
+n=length(x)
+b0=1
+b1=0.5
+epsi=rnorm(n,mean=0,sd=0.2)
+
+pi=function(x) {
+  1/(1+exp(-(b0+b1*x+epsi)))
+}
+head (pi(x))
+
+# Apartat 1
+dades=data.frame(x,pi(x))
+head (dades)
+
+# Apartat 2
+y=b0+b1*x+epsi
+dades$y=y
+head (dades)
+
+# Apartat 3
+mod=lm(y~x,data=dades)
+mod$coefficients
+
+# Apartat 4
+hatb1=cov(x,y)/var(x)
+hatb0=mean(y)-(hatb1*mean(x))
+e1=mod$residuals
+
+haty=hatb0+(hatb1*x)
+
+hatp=function(x) {
+  1/(1+exp(-(hatb0+hatb1*x+e1)))
+}
+
+dades$haty=haty
+dades$hatp=hatp(x)
+head (dades)
+
+# Apartat 5
+e=y-haty
+ep=pi(x)-hatp(x)
+
+dades$e=e
+dades$ep=ep
+head (dades)
+
+# Apartat 6
+par (mfrow=c(1,2),cex=.5,cex.axis=.8,cex.main=8,cex.lab=.8)
+plot (y~x,col="red");abline(mod)
+plot (pi(x)~x,col="red",xlim=c(-10,10))
+
+# Apartat 7
+par (mfrow=c(1,2),cex=.5,cex.axis=.8,cex.main=8,cex.lab=.8)
+plot (e~haty,ylim=c(-0.6,0.6))
+plot (ep~hatp(x))
+```

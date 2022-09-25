@@ -1,0 +1,123 @@
+---
+title: "Practica 2"
+author: "Clara Albert"
+date: "29 de septiembre de 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+```
+
+
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+library("foreign", lib.loc="C:/Program Files/R/R-3.5.1/library")
+require(foreign)
+data<-read.spss("preuconsum.sav",to.data.frame=T)
+data<-data[,1:3]
+data<-na.omit(data)
+names(data)<-c("id","y","x")
+names (data)
+```
+
+# Exercici 2.1
+
+```{r}
+n=nrow(data)
+m=ncol(data)
+pendent=cov(data$x,data$y)/var(data$x)
+pendent
+intercept=mean(data$y)-(pendent*mean(data$x))
+intercept
+residus=(data$y-(intercept+pendent*data$x))
+mse=sum (residus*residus)/(n-2)
+mse
+
+
+llista=as.list(c(intercept,pendent,mse),all.names=T)
+names(llista)=c("intercept","pendent","mse")
+llista
+
+```
+
+# Exercici 2.2
+
+```{r}
+MLIN=function(x,y){
+  n=length(x)
+  
+  X=cbind(rep(1,n),x)
+  Y=matrix (nrow=n,ncol=1,y)
+  
+  B=solve(t(X)%*%X)%*%t(X)%*%Y
+
+  Prediccions=X%*%B
+  Residus=Y-Prediccions
+  A=matrix(nrow=n,ncol=2,data=c(Prediccions,Residus))
+  mse=sum (Residus*Residus)/(n-2)
+  
+  
+  print ("Coeficients del model:")
+  print (B)
+  
+  print ("Matriu amb les prediccions i els residus:")
+  print (A)
+  
+  print("Estimacio de la variancia (MSE):")
+  print (mse)
+  
+}
+
+MLIN (data$x,data$y)
+```
+
+
+# Exercici 2.3
+```{r}
+mod=lm (y~x,data=data,x=TRUE,y=TRUE)
+names (mod)
+```
+Interpretació objectes de mod: 
+
+- Coeff: Hi ha dos valors: el valor de la b0 i el valor de la b1 
+
+- Residual: Residus per a cada valor y.
+
+- Fitted.values: Prediccions de la variable y
+
+- Df.residual: Graus de llibertat del model
+
+- Call: Funció que em utilitzat
+
+- Model: Valors de la x i la y en les dades donades inicialment. 
+
+- x: Valors de la x en les dades donades inicialment
+
+- y: Valors de la y en les dades donades inicialment
+
+
+# Exercici 2.4
+
+```{r}
+smod=summary (mod)
+v=as.list(c(mod$coefficients[1],mod$coefficients[2],sqrt(smod$sigma)))
+names(v)=c("intercept","pendent","mse")
+v
+```
+
+# Exercici 2.5
+
+```{r}
+y1=rt(n=200,df=3)
+y2=rexp (200, rate=1)
+par (mfrow=c(1,2),cex.main=.6,cex.lab=.7,cex.axis=.7,pch=20)
+qqnorm (scale(y1))
+qqnorm (scale(y2))
+```
+
+Al qq-plot de valors d'una llei t-student s'observa com en les dues cues de la gràfica hi ha una petita manca de normalitat.A més a més, la funció de la t-student és en forma de campana i amb aquest qq-plot no s'observa aquesta forma. 
+
+En canvi, al qq-plot de valors d'una llei exponencial s'observa com la gràfica segueix una tendencia exponencial (Cada cop va creixent més ràpid) com la seva funció. A més a més, hi ha una petita anomalia a la cua dreta. 
+

@@ -1,0 +1,139 @@
+---
+title: "Practica 7 i 8"
+author: "Clara Albert"
+date: "23 de noviembre de 2019"
+output: html_document
+---
+```{r}
+dwaine <- read.csv("~/GEA/Models lineals/Practiques/dwaine.txt", sep="")
+head (dwaine)
+library (car)
+library (scatterplot3d)
+library(Rcmdr)
+library(rgl)
+library(MASS)
+```
+
+# Practica 7
+
+## Exercici 1
+```{r}
+colnames (dwaine)
+pairs (dwaine[2:4],panel=function(x,y){points(x,y,pch=21,bg="darkblue");abline(lm(y~x),lwd=2)})
+cor (dwaine)
+```
+A priori crec que el model lineal pot ser bastant apropiat, ja que al grafic es pot apreciar una bona relacio lineal. 
+
+La colinealitat entre les variables regressiores la prevenia ja que crec que entre l'edat i els ingressos si que existeix una certa relacio. Tots els menors de 16 anys, mes o menys, tenen ingressos semblants (la majoria estudiants que no treballen) independenment de la ciutat. 
+
+## Exercici 2
+```{r}
+scatterplot3d(dwaine$X1,dwaine$X2,dwaine$Y,main="Vendes vs poblacio<16 i ingressos" ,cex.main=.7 ,cex.axis=.5 ,cex.lab=0.7 ,angle=20 ,pch=16)
+s3d=scatterplot3d(dwaine$X1,dwaine$X2,dwaine$Y,main="Vendes vs poblacio<16 i ingressos", ,cex.main=.7 ,cex.axis=.5 ,cex.lab=0.7 ,angle=20 ,pch=16,type="h", highlight.3d=TRUE);s3d$plane3d(lm(dwaine$Y~dwaine$X1+dwaine$X2))
+```
+
+## Exercici 3
+```{r}
+scatter3d(dwaine$X1,dwaine$X2,dwaine$Y)
+```
+
+## Exercici 4
+```{r}
+require (rgl)
+attach (Duncan)
+scatter3d(Duncan$education,Duncan$income,Duncan$prestige ,cex.main=.7 ,cex.axis=.5 ,cex.lab=0.7 ,angle=20 ,pch=16)
+scatter3d(Duncan$education,Duncan$income,Duncan$prestige,cex.main=.7 ,cex.axis=.5 ,cex.lab=0.7 ,angle=20 ,pch=16)
+scatter3d(x=income, y=prestige, z=education, groups = type)
+```
+
+## Exercici 5
+```{r}
+require (rgl)
+attach (Duncan)
+open3d()
+plot3d(income,education,prestige)
+
+df1<-subset(Duncan,type=="prof"); df2<-subset(Duncan,type=="bc"); df3<-subset(Duncan,type=="wc")
+xmin=min(income); xmax=max(income); ymin=min(education); ymax=max(education);
+zmin=min(prestige); zmax=max(prestige)
+plot3d (df1$income,df1$education,df1$prestige,col="red");points3d(df2$income,df2$education,df2$prestige,col="blue", xlim = c(xmin,xmax),ylim = c(ymin,ymax), zlim = c(zmin,zmax));points3d(df3$income,df3$education,df3$prestige,col="green")
+
+require(MASS)
+x=Duncan[,-1]
+m=apply(x,2,mean)
+S=cov(x)
+open3d()
+plot3d(x,box=FALSE)
+plot3d(ellipse3d(S,centre = m),col="green",alpha=0.2,add=TRUE)
+```
+
+
+# Practica 8
+
+## Exercici 1
+```{r}
+n=nrow(dwaine)
+X=as.matrix(dwaine[2:3])
+X=cbind(rep(1,n),X)
+head (X)
+
+Y=as.matrix (dwaine[4])
+head (Y)
+A=solve(t(X)%*%X)%*%t(X)
+H=X%*%A
+head (H)
+I=diag(x=1, nrow=n, ncol=21, names = TRUE)
+M=I-H
+head (M)
+
+Coef=A%*%Y
+Coef
+Pred=H%*%Y
+head (Pred)
+Resi=M%*%Y
+head (Resi)
+Resi
+
+t(X)%*%Resi
+t(Resi)%*%Pred
+
+SSE=sum(Resi*Resi)
+MSE=SSE/(21-2-1)
+SST=sum((Pred-mean(Pred))*(Pred-mean(Pred)))
+MST=SST/(21-1)
+SSR=SST-SSE
+R=1-(SSE/SST)
+Raj=1-(MSE/MST)
+MSE
+R
+Raj
+```
+Veiem que la els residus i la matriu de disseny son aproximadament ortogonals i els residus i el vector de prediccions tambe ho son. 
+
+## Exercici 2
+```{r}
+lm(Y~X1+X2,data=dwaine)
+```
+
+## Exercici 3
+```{r}
+(mod1=lm(Y~X1,data=dwaine))
+(mod2=lm(Y~X2,data=dwaine))
+(mod=lm(Y~X1+X2,data=dwaine))
+```
+
+## Exercici 4
+```{r}
+mod1.2=lm(X1~X2,data=dwaine)
+e1.2=mod1.2$residuals
+mode1.2=lm(Y~e1.2,data=dwaine)
+summary(mode1.2)
+summary(mod)
+
+mod2.1=lm(X2~X1,data=dwaine)
+e2.1=mod2.1$residuals
+mode2.1=lm(Y~e2.1,data=dwaine)
+summary (mode2.1)
+summary(mod)
+```
+

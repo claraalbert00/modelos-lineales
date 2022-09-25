@@ -1,0 +1,270 @@
+---
+title: "Practica 9 i 10"
+author: "Clara Albert"
+date: "25 de noviembre de 2019"
+output: html_document
+---
+# Pràctica 9
+```{r}
+## library (car);library (lmtest);library (lawstat);library (nortest);library (doBy)
+dades=read.table("cases.txt",header=T)
+head(dades,4)
+dim (dades)
+```
+
+
+## Exercici 1
+
+```{r}
+pairs(dades[,-c(4,6)],panel=function(x,y){points(x,y);abline(lm(y~x),lwd=2)})
+print(round(cor(dades[,-c(4,6)]),digits=2))
+attach(dades)
+
+par(mfrow=c(1,2))
+boxplot(PREU~FP);boxplot(PREU~STORM)
+table(FP); table(STORM)
+```
+
+## Exercici 2
+
+```{r}
+mod<-lm(PREU ~ .,data=dades); names(mod)
+smod<-summary(mod); smod; names(smod)
+coefs<-smod$coefficients[,1]; coefs
+e.tips<-smod$coefficients[,2]; e.tips
+MSE<-smod$sigma^2; print(paste("MSE= ",MSE))
+```
+a)  
+H0: beta1=...=betak=0
+H1: Algun diferent a 0
+
+Aquest model és significatiu ja que les betes són diferents de zero, per tant acceptem H1. El model lineal és una bona opció ja que totes tenen el pendent diferent a 0. 
+
+b) Les que són més susceptible són les que l'estimació de beta gairebé és 0. En aquest cas les variables SUPERF i SUPMTERR. 
+
+c) Que hi haguin estimacions negatives. 
+
+
+## Exercici 3
+```{r}
+n<-nrow(mod$model)
+k<-mod$rank-1
+gl<-n-k-1
+alpha<-.05
+(b1<-smod$coefficients[2,1])
+(sb1<-smod$coefficients[2,2])
+li_b1<-b1-qt(1-alpha/2,gl)*sb1
+ls_b1<-b1+qt(1-alpha/2,gl)*sb1
+(int.beta1<-list(linf=li_b1,lsup=ls_b1))
+
+a<-qchisq(alpha/2,n-k-1)
+b<-qchisq(1-alpha/2,n-k-1)
+li_var<-(n-k-1)*MSE/b
+ls_var<-(n-k-1)*MSE/a
+(int.var<-list(linf=li_var,lsup=ls_var ))
+
+SST<-(n-1)*var(PREU)
+SSR<-SST-(MSE)*(n-k-1)
+MSR<-SSR/k
+(fob<-MSR/MSE)
+(pvalor<-1-pf(fob,k,n-k-1)) 
+
+fob<-smod$fstatistic; fob
+pval<-1-pf(fob[1],fob[2],fob[3]); print(paste("pvalor= ",pval))
+```
+
+## Exercici 4
+```{r}
+betaCI=function (mod,i=1,alpha=.05){
+  n=nrow(mod$model)
+  k=mod$rank-1
+  gl=n-k-1
+  bi=smod$coefficients[i+1,1]
+  abi=smod$coefficients[i+1,2]
+  li_bi=bi-qt(1-alpha/2,gl)*abi
+  ls_bi=bi+qt(1-alpha/2,gl)*abi
+  list(coeficients=i,estim=bi,linf=li_bi,lsup=ls_bi)
+}
+
+betaCI(mod,i=4)
+betaCI(mod,i=0)
+
+```
+
+## Exercici 5
+```{r}
+var.CI=function (mod,alpha=.05){
+  n=nrow(mod$model)
+  k=mod$rank-1
+  gl=n-k-1
+  a=qchisq(alpha/2,gl)
+  b=qchisq(1-alpha/2,gl)
+  MSE=summary(mod)$sigma^2
+  li_var=(n-k-1)*MSE/b
+  ls_var=(n-k-1)*MSE/a
+  list (estim.var=MSE,linf=li_var,lsup=ls_var)
+}
+var.CI(mod)
+var.CI(mod,alpha=0.1)
+```
+
+## Exercici 6
+```{r}
+dades$st[dades$STORM=="no"]<-0
+dades$st[dades$STORM!="no"]<-1
+head(dades,3)
+
+n<-nrow(dades)
+X<-as.matrix(cbind(rep(1,n),dades[c(2:5,10,7:9)]))
+head(X,3)
+
+Y=as.matrix(dades[1])
+A=solve(t(X)%*%X)%*%t(X)
+H=X%*%A
+head (H,3)
+dim (H)
+I=diag(x=1, nrow=n, ncol=26, names = TRUE)
+M=I-H
+head (M,3)
+
+list(coef=A%*%Y, diag_H=diag(H), diag_M=diag(M))
+```
+
+
+
+# Pràctica 10
+
+## Apartat 1
+```{r}
+cases=read.table("cases.txt",header=T)
+mod=lm(PREU~SUPERF+BANYS+STORM+FP+SUPMTERR+HABIT+DORMIT+PL_GAR,data=dades)
+
+n=nrow(mod$model)
+p=mod$rank
+k=p-1
+gl=n-k-1
+```
+
+## Apartat 2
+```{r}
+smod=summary(mod); smod
+```
+
+## Apartat 3
+```{r}
+coefs=smod$coefficients; coefs
+all.equal(coefs[,3],coefs[,1]/coefs[,2])
+all.equal(coefs[,4],2*(1-pt(abs(coefs[,3]),gl)))
+```
+
+
+## Apartat 4
+```{r}
+mod=lm(PREU~SUPERF+BANYS+STORM+FP+SUPMTERR+HABIT+DORMIT+PL_GAR,data=dades)
+sse=sum(mod$residuals^2)
+
+mod_1=lm(PREU~BANYS+STORM+FP+SUPMTERR+HABIT+DORMIT+PL_GAR,data=dades)
+sse_1=sum(mod_1$residuals^2)
+
+gln=1
+gld=n-k-1; 
+F_1=((sse_1-sse)/gln)/(sse/gld)
+
+p_1=1-pf(F_1,gln,gld)
+p_1; coefs[2,4]
+```
+
+
+
+## Apartat 5
+```{r}
+anova (mod)
+
+# Podem fer-ho manualment: 
+sse=sum(mod$residuals^2)
+gld=gl
+
+mod1=lm(PREU~SUPERF,data=dades)
+sse1=sum(mod1$residuals^2)
+sst=(n-1)*var(dades$PREU)
+sse0=sst
+gln=1
+F1=((sse0-sse1)/1)/(sse/gld)
+p1=1-pf(F1,1,gld)
+
+mod12=lm(PREU~SUPERF+BANYS,data=dades)
+sse12=sum(mod12$residuals^2)
+gln=1
+F2vs1=((sse1-sse12)/gln)/(sse/gld)
+p2vs1=1-pf(F2vs1,gln,gld)
+
+print(list(SUPERF_F_tipI=F1,SUPERF_pval_tipI=p1,BANYS_F_tipI=F2vs1,BANYS_pval_tipI=p2vs1))
+```
+
+
+## Apartat 6
+## Exercici 1
+
+```{r}
+sse=sum(mod$residuals^2)
+modll=lm(PREU~SUPERF+BANYS+STORM+FP+DORMIT,data=dades)
+ssell=sum(modll$residuals^2)
+r=3
+Fll=((ssell-sse)/r)/(sse/(n-k-1))
+pll=1-pf(Fll,r,n-k-1);pll
+
+R2llaj=summary(modll)$adj.r.squared; R2llaj
+R2aj=summary(mod)$adj.r.squared; R2aj
+
+anova(mod,modll)
+require (car)
+linearHypothesis(mod, c("SUPMTERR=0","HABIT=0","PL_GAR=0"))
+```
+El p-valor calculat manualment (pll) és igual que el p-valor calculat amb la funció anova o linearHypothesis. El p-valor és més petit que 0.05, per tant és significatiu i no podem treure totes les variables alhora.
+El valor de R2-aj disminueix.  
+
+
+## Exercici 2
+```{r}
+modf=lm(PREU~SUPERF+STORM+FP+HABIT+DORMIT,data=dades);modf
+anova(mod,modf)
+
+R2faj=summary(modf)$adj.r.squared; R2faj
+R2aj=summary(mod)$adj.r.squared; R2aj
+```
+Realizant el test podem treure les 3 variables alhora, ja que el p-valor (0.1223) és més gran que 0.05 i per tant acceptem H0. 
+
+H0: B2=B5=B8=0
+
+## Exercici 3
+```{r}
+# Apartat a
+summary (modf)
+kf=modf$rank
+kf
+glf=n-kf-1
+coef=summary(modf)
+coef=coef$coefficients
+coef
+Tj=(coef[4,1]-10)/coef[4,2]
+pj=2*(1-pt(Tj,glf));pj
+
+
+# Apartat b
+require (car)
+linearHypothesis(modf, c("FP=10"))
+
+# Apartat c
+dades$st[dades$STORM=="no"]=0
+dades$st[dades$STORM!="no"]=1
+
+dades$st
+head (dades,3)
+require (car)
+modfll=lm(PREU~SUPERF+FP+HABIT+DORMIT+st,data=dades);modfll
+linearHypothesis(modfll, c("FP=st"))
+```
+
+Veiem que el p-valor de l'apartat a i del apartat b és el mateix i que és bastan més gran que 0.05. Per tant, amb un 95% de confiança acceptem H0 (B3=10). 
+En l'apartat c, el p-valor és bastant més gran que 0.05, per tant acceptem H0, on H0: B2=B3.
+

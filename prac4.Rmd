@@ -1,0 +1,210 @@
+---
+title: "Practica 4"
+author: "Clara Albert"
+date: "17 de octubre de 2019"
+output: html_document
+---
+
+```{r}
+require(foreign)
+data<-read.spss("preuconsum.sav",to.data.frame=T)
+data<-data[!is.na(data$ID),1:3]
+names(data)<-c("id","y","x")
+head (data)
+mod=lm(y~x,data=data,x=TRUE,y=TRUE)
+smod=summary(mod)
+names(mod)
+mod
+```
+# 4.1 Intervals de confiança per als parametres
+
+## Exercici 1
+
+```{r}
+beta0=mod$coefficients[1]
+beta1=mod$coefficients[2]
+
+
+s.beta0=smod$coefficients[1,2]
+s.beta1=smod$coefficients[2,2]
+  
+g1=mod$df.residual
+
+t.beta0=smod$coefficients[1,3]
+t.beta1=smod$coefficients[2,3]
+
+p.beta0=smod$coefficients[1,4]
+p.beta1=smod$coefficients[2,4]
+
+MSE=sum (mod$residuals*mod$residuals)/g1
+
+R2=smod$r.squared
+R2.a=smod$adj.r.squared
+
+mod$coefficients
+p.beta0
+p.beta1
+```
+Interpretació de:
+
+- Beta0: No hi haurà un valor més gran que beta0.
+
+- Beta1: Com que els seu valor és negatiu, el model lineal decreix. 
+
+- P.beta0:Valor molt petit (<0.05)
+
+- P.beta1:Com el p.beta0 el seu valor és molt petit (<0.05), però no ho és tant com l'altre p-valor. 
+
+## Exercici 2
+
+```{r}
+linf.beta0=beta0-qt(0.975,g1)*s.beta0
+lsup.beta0=beta0+qt(0.975,g1)*s.beta0
+linf.beta1=beta1-qt(0.975,g1)*s.beta1
+lsup.beta1=beta1+qt(0.975,g1)*s.beta1
+
+llista=as.list(c(linf.beta0,lsup.beta0,linf.beta1,lsup.beta1),all.names=T)
+names (llista)=c("linf.beta0","lsup.beta0","linf.beta1","lsup.beta1")
+llista
+```
+
+## Exercici 3
+
+```{r}
+confint(mod,level=0.95)
+confint(mod,level=0.99)
+```
+Els canvis que es produeixen són molt petits. Veiem que l'interval de l'intercept amb un 99% de confiança és una mica més ample, però l'altre variables l'interval és més estret. 
+
+## Exercici 4
+
+```{r}
+CI.var=function(x,y,nc=0.95){
+  mod=lm(y~x,data=data,x=TRUE,y=TRUE)
+  g1=mod$df.residual
+  n=length(x)
+  MSE=sum (mod$residuals*mod$residuals)/g1
+  a=1-nc
+  linf.sigma2=(g1*MSE)/qchisq((1-a/2),g1)
+
+  lsup.sigma2=(g1*MSE)/qchisq(a/2,g1)
+  llista=as.list(c(MSE,linf.sigma2,lsup.sigma2))
+  names (llista)=c("MSE","linf.sigma2","lsup.sigma2")
+  print (llista)
+}
+
+CI.var(data$x,data$y,0.95)
+CI.var(data$x,data$y,0.99)
+```
+
+
+
+
+# 4.2 Bandes de confiança i de predicció de noves observacions
+
+```{r}
+xh=data.frame(x=seq(1.85,2.51,by=.03))
+predict(mod,newdata=xh)
+```
+
+## Exercici 1
+```{r}
+bandes=function (x,y,xh,level=.95){
+  mod=lm(y~x,x=TRUE,y=TRUE)
+  g1=mod$df.residual
+  n=length(x)
+  a=1-level
+  MSE=sum (mod$residuals*mod$residuals)/g1
+  mitj=mean(x)
+  pred=predict(mod,newdata=xh)
+  
+  suma=sum((x-mitj)^2)
+ 
+  s.muxh=MSE*(1/n+((xh-mitj)^2/suma))
+  
+  lmean=pred-qt(1-(a/2),g1)*sqrt(s.muxh)
+  umean=pred+qt(1-(a/2),g1)*sqrt(s.muxh)
+  
+  s.muyh=MSE*(1+(1/n)+((xh-mitj)^2/suma))
+  lpred=pred-qt(1-(a/2),g1)*sqrt(s.muyh)
+  upred=pred+qt(1-(a/2),g1)*sqrt(s.muyh)
+  dades=data.frame (xh,pred,lmean,umean,lpred,upred)
+  names (dades)=c("new","pred","lmean","umean","lpred","upred")
+  dades
+}
+
+head (bandes (data$x,data$y,xh,0.95))
+```
+
+## Exercici 2
+``` {r}
+xbandes=xh
+ybandes=bandes(data$x,data$y,xh)[,-1]
+
+matplot(xbandes, ybandes, ylim=c(min(ybandes),max(ybandes)),
+lty = c(1,1,1,2,2), col=c(1,2,2,4,4), type = "l",
+ylab = "prediccions del consum",xlab="preu",
+main="bandes de confianca (vermell) i de prediccio (blau)", cex.main=.8)
+points(data$x,data$y,pch=20,cex=.8)
+
+```
+
+## Exercici 3
+``` {r}
+conf.band=predict(mod,newdata=xh,interval="confidence")
+pred.band=predict(mod,newdata=xh,interval="prediction")
+ybandes2=data.frame(conf.band,pred.band[,-1])
+head (ybandes2)
+
+matplot(xbandes, ybandes2, ylim=c(min(ybandes2),max(ybandes2)),
+lty = c(1,1,1,2,2), col=c(1,2,2,4,4), type = "l",
+ylab = "prediccions del consum",xlab="preu",
+main="bandes de confianca (vermell) i de prediccio (blau)", cex.main=.8)
+points(data$x,data$y,pch=20,cex=.8)
+
+```
+
+
+## Exercici 4
+``` {r}
+
+require(investr)
+plotFit(mod,"both")
+plotFit(mod,"both",pch=19,cex=.8,shade=T,col.conf = "skyblue4", col.pred = "lightskyblue2")
+```
+
+## Exercici 5
+``` {r}
+wh.bandes=function(x,y,xh,level=.95){
+  mod=lm(y~x,x=TRUE,y=TRUE)
+  g1=mod$df.residual
+  n=length(x)
+  a=1-level
+  MSE=sum (mod$residuals*mod$residuals)/g1
+  mitj=mean(x)
+  pred=predict(mod,newdata=xh)
+  W=sqrt(2*qf(1-a,2,g1))
+  
+  suma=sum((x-mitj)^2)
+ 
+  s.muxh=MSE*(1/n+((xh-mitj)^2/suma))
+  
+  wh.lmean=pred-W*sqrt(s.muxh)
+  wh.umean=pred+W*sqrt(s.muxh)
+  
+  s.muyh=MSE*(1+(1/n)+((xh-mitj)^2/suma))
+  
+  wh.lpred=pred-W*sqrt(s.muyh)
+  wh.upred=pred+W*sqrt(s.muyh)
+  
+  dades=data.frame (xh,pred,wh.lmean,wh.umean,wh.lpred,wh.upred)
+  names (dades)=c("new","pred","wh.lmean","wh.umean","wh.lpred","wh.upred")
+  
+  dades
+}
+
+head (wh.bandes(data$x,data$y,xh))
+
+require (investr)
+plotFit(mod,"both",adjust="Scheffe",k=2)
+```
